@@ -85,13 +85,19 @@ struct FirefoxQuery {
 
 // --- Handlers ---
 
+/// Content-Security-Policy applied to all HTML pages.
+/// - `default-src 'self'` blocks all external resource loading
+/// - `style-src 'self' 'unsafe-inline'` allows highlight.js inline styles
+const CSP_HEADER: &str = "default-src 'self'; style-src 'self' 'unsafe-inline'";
+
 /// GET / — serves either the landing page or the streaming chat UI
 async fn handle_page(Query(query): Query<FirefoxQuery>) -> Response {
-    if query.q.as_ref().is_some_and(|q| !q.is_empty()) {
-        Html(CHAT_HTML).into_response()
+    let html = if query.q.as_ref().is_some_and(|q| !q.is_empty()) {
+        CHAT_HTML
     } else {
-        Html(LANDING_HTML).into_response()
-    }
+        LANDING_HTML
+    };
+    ([(header::CONTENT_SECURITY_POLICY, CSP_HEADER)], Html(html)).into_response()
 }
 
 /// GET /api/chat?q=... — SSE streaming endpoint called by the chat UI's JavaScript
