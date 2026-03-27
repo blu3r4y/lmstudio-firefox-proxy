@@ -27,6 +27,8 @@ The human provided the idea, direction, and feedback. The AI wrote the code.
 - **Fully offline** — All frontend dependencies (marked.js, highlight.js) are vendored and embedded in the binary
 - **Single binary** — No runtime dependencies, no config files, just run it
 
+<video src="https://github.com/user-attachments/assets/6414bf12-39d1-4e24-a7d5-5c8aeac4a6aa" autoplay loop muted playsinline></video>
+
 ## Installation
 
 ### Pre-built binaries
