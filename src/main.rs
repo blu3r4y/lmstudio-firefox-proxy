@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio_stream::{wrappers::ReceiverStream, StreamExt};
+use tokio_stream::{StreamExt, wrappers::ReceiverStream};
 
 macro_rules! log {
     ($($arg:tt)*) => { eprintln!($($arg)*) };
@@ -123,11 +123,7 @@ async fn handle_stream(
             let status = r.status();
             let body = r.text().await.unwrap_or_default();
             log!("LM Studio error: HTTP {} {}", status, body);
-            return sse_error(&format!(
-                "LM Studio returned HTTP {}: {}",
-                status, body
-            ))
-            .await;
+            return sse_error(&format!("LM Studio returned HTTP {}: {}", status, body)).await;
         }
         Err(e) => {
             log!("Connection failed: {}", e);
@@ -176,9 +172,7 @@ async fn handle_stream(
                     let data = data.trim();
 
                     if data == "[DONE]" {
-                        let _ =
-                            tx.send(Ok(Event::default().event("done").data("")))
-                                .await;
+                        let _ = tx.send(Ok(Event::default().event("done").data(""))).await;
                         return;
                     }
 
@@ -187,10 +181,7 @@ async fn handle_stream(
                             .choices
                             .first()
                             .and_then(|c| c.delta.content.as_deref())
-                        && tx
-                            .send(Ok(Event::default().data(content)))
-                            .await
-                            .is_err()
+                        && tx.send(Ok(Event::default().data(content))).await.is_err()
                     {
                         return; // client disconnected
                     }
@@ -199,9 +190,7 @@ async fn handle_stream(
         }
 
         // Stream ended without [DONE] — still signal completion
-        let _ = tx
-            .send(Ok(Event::default().event("done").data("")))
-            .await;
+        let _ = tx.send(Ok(Event::default().event("done").data(""))).await;
     });
 
     Sse::new(ReceiverStream::new(rx)).into_response()
@@ -229,33 +218,54 @@ const VENDOR_HLJS_GITHUB: &str = include_str!("../static/vendor/github.min.css")
 const VENDOR_HLJS_GITHUB_DARK: &str = include_str!("../static/vendor/github-dark.min.css");
 
 async fn serve_css() -> impl IntoResponse {
-    ([(header::CONTENT_TYPE, "text/css; charset=utf-8")], CHAT_CSS)
+    (
+        [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
+        CHAT_CSS,
+    )
 }
 
 async fn serve_js() -> impl IntoResponse {
-    ([
-        (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
-    ], CHAT_JS)
+    (
+        [(
+            header::CONTENT_TYPE,
+            "application/javascript; charset=utf-8",
+        )],
+        CHAT_JS,
+    )
 }
 
 async fn serve_vendor_marked() -> impl IntoResponse {
-    ([
-        (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
-    ], VENDOR_MARKED_JS)
+    (
+        [(
+            header::CONTENT_TYPE,
+            "application/javascript; charset=utf-8",
+        )],
+        VENDOR_MARKED_JS,
+    )
 }
 
 async fn serve_vendor_hljs() -> impl IntoResponse {
-    ([
-        (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
-    ], VENDOR_HLJS)
+    (
+        [(
+            header::CONTENT_TYPE,
+            "application/javascript; charset=utf-8",
+        )],
+        VENDOR_HLJS,
+    )
 }
 
 async fn serve_vendor_hljs_github() -> impl IntoResponse {
-    ([(header::CONTENT_TYPE, "text/css; charset=utf-8")], VENDOR_HLJS_GITHUB)
+    (
+        [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
+        VENDOR_HLJS_GITHUB,
+    )
 }
 
 async fn serve_vendor_hljs_github_dark() -> impl IntoResponse {
-    ([(header::CONTENT_TYPE, "text/css; charset=utf-8")], VENDOR_HLJS_GITHUB_DARK)
+    (
+        [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
+        VENDOR_HLJS_GITHUB_DARK,
+    )
 }
 
 // --- Main ---
@@ -277,15 +287,16 @@ async fn main() {
         .route("/vendor/marked.min.js", get(serve_vendor_marked))
         .route("/vendor/highlight.min.js", get(serve_vendor_hljs))
         .route("/vendor/github.min.css", get(serve_vendor_hljs_github))
-        .route("/vendor/github-dark.min.css", get(serve_vendor_hljs_github_dark))
+        .route(
+            "/vendor/github-dark.min.css",
+            get(serve_vendor_hljs_github_dark),
+        )
         .with_state(state);
 
-    let listener = TcpListener::bind(&args.listen)
-        .await
-        .unwrap_or_else(|e| {
-            eprintln!("Failed to bind to {}: {}", args.listen, e);
-            std::process::exit(1);
-        });
+    let listener = TcpListener::bind(&args.listen).await.unwrap_or_else(|e| {
+        eprintln!("Failed to bind to {}: {}", args.listen, e);
+        std::process::exit(1);
+    });
 
     eprintln!(
         "LM Studio Firefox Proxy listening on http://{}",
