@@ -82,6 +82,23 @@ All options can also be set via environment variables:
 | `--lmstudio-url`  | `LMSTUDIO_URL` | `http://localhost:1234`                   |
 | `--model` / `-m`  | `MODEL`        | _(empty — uses LM Studio's loaded model)_ |
 
+### Running at Startup (Windows)
+
+To have the proxy start automatically when you log in, create a scheduled task using **Task Scheduler**.
+Replace the paths and arguments as needed for your setup.
+
+**Program:**
+
+```text
+C:\Program Files\PowerShell\7\pwsh.exe
+```
+
+**Arguments:**
+
+```text
+-WindowStyle Hidden -ExecutionPolicy Bypass -Command "Start-Process -FilePath 'C:\PATH\TO\lmstudio-firefox-proxy.exe' -ArgumentList '--model qwen/qwen3.5-9b' -WindowStyle Hidden"
+```
+
 ## Compatibility
 
 Tested with **LM Studio 0.4.8** (latest). Older versions that use the same OpenAI-compatible API should also work — thinking models are supported regardless of whether the server sends reasoning via the `reasoning_content` field (new) or `<think>` tags (old).
