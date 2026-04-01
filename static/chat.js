@@ -2,6 +2,9 @@
   var statusEl   = document.getElementById('status');
   var responseEl = document.getElementById('response');
   var errorEl    = document.getElementById('error');
+  var followupEl = document.getElementById('followup');
+  var followupIn = document.getElementById('followup-input');
+  var followupGo = document.getElementById('followup-send');
   var thinkWrap  = document.getElementById('thinking-wrapper');
   var thinkHead  = document.getElementById('thinking-header');
   var thinkEl    = document.getElementById('thinking');
@@ -10,6 +13,11 @@
 
   var rawContent = '', isDone = false, renderFrame = null;
   var thinkingDone = false;
+  var es = null;
+  var currentRequestId = 0;
+  var currentQuestion = '';
+  var initialPrompt = new URLSearchParams(window.location.search).get('q') || '';
+  var turns = [];
 
   // Toggle thinking visibility on header click
   thinkHead.addEventListener('click', function() {
@@ -65,6 +73,34 @@
     }
   }
 
+  function plainAnswerText() {
+    var parsed = parseThinking();
+    return (parsed.main || rawContent).replace(/<\/?think>/g, '').trim();
+  }
+
+  function resetForStream() {
+    rawContent = '';
+    isDone = false;
+    thinkingDone = false;
+    if (renderFrame) {
+      cancelAnimationFrame(renderFrame);
+      renderFrame = null;
+    }
+
+    statusEl.style.display = 'flex';
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+
+    responseEl.classList.add('streaming');
+    responseEl.innerHTML = '';
+
+    thinkWrap.classList.remove('active');
+    thinkLabel.textContent = 'Thinking\u2026';
+    thinkChev.classList.remove('collapsed');
+    thinkEl.classList.remove('collapsed');
+    thinkEl.innerHTML = '';
+  }
+
   function scheduleRender() {
     if (renderFrame) return;
     renderFrame = requestAnimationFrame(function() {
@@ -79,36 +115,109 @@
     responseEl.classList.remove('streaming');
     errorEl.style.display = 'block';
     errorEl.textContent = msg;
+    followupEl.classList.add('active');
+    followupGo.disabled = false;
   }
 
-  var es = new EventSource('/api/chat' + window.location.search);
-
-  es.onmessage = function(e) {
-    statusEl.style.display = 'none';
-    rawContent += e.data;
-    scheduleRender();
-  };
-
-  es.addEventListener('done', function() {
-    isDone = true;
-    es.close();
-    responseEl.classList.remove('streaming');
-    renderAll();
-  });
-
-  es.addEventListener('server_error', function(e) {
-    isDone = true;
-    es.close();
-    showError(e.data);
-  });
-
-  es.onerror = function() {
-    es.close();
-    responseEl.classList.remove('streaming');
-    if (!isDone && !rawContent) {
-      showError('Failed to connect to the proxy server.');
-    } else if (rawContent) {
-      renderAll();
+  function streamPrompt(prompt, userQuestion) {
+    if (!prompt) {
+      showError('Missing prompt.');
+      return;
     }
-  };
+
+    currentRequestId += 1;
+    var requestId = currentRequestId;
+    currentQuestion = userQuestion || '';
+
+    if (es) {
+      es.close();
+      es = null;
+    }
+
+    followupEl.classList.remove('active');
+    followupGo.disabled = true;
+    resetForStream();
+
+    es = new EventSource('/api/chat?q=' + encodeURIComponent(prompt));
+
+    es.onmessage = function(e) {
+      if (requestId !== currentRequestId) return;
+      statusEl.style.display = 'none';
+      rawContent += e.data;
+      scheduleRender();
+    };
+
+    es.addEventListener('done', function() {
+      if (requestId !== currentRequestId) return;
+      isDone = true;
+      es.close();
+      es = null;
+      responseEl.classList.remove('streaming');
+      renderAll();
+
+      var answer = plainAnswerText();
+      if (currentQuestion && answer) {
+        turns.push({ question: currentQuestion, answer: answer });
+      }
+
+      followupEl.classList.add('active');
+      followupGo.disabled = false;
+      followupIn.focus();
+    });
+
+    es.addEventListener('server_error', function(e) {
+      if (requestId !== currentRequestId) return;
+      isDone = true;
+      es.close();
+      es = null;
+      showError(e.data);
+    });
+
+    es.onerror = function() {
+      if (requestId !== currentRequestId) return;
+      es.close();
+      es = null;
+      responseEl.classList.remove('streaming');
+      if (!isDone && !rawContent) {
+        showError('Failed to connect to the proxy server.');
+      } else if (rawContent) {
+        renderAll();
+        followupEl.classList.add('active');
+        followupGo.disabled = false;
+      }
+    };
+  }
+
+  function composeFollowupPrompt(question) {
+    var segments = [
+      'You are continuing a conversation about previously provided content.'
+    ];
+
+    if (initialPrompt.trim()) {
+      segments.push('Initial content/request:\n' + initialPrompt.trim());
+    }
+
+    if (turns.length) {
+      var recent = turns.slice(-3).map(function(turn, i) {
+        var n = i + 1;
+        return 'Recent turn ' + n + ' user:\n' + turn.question +
+          '\n\nRecent turn ' + n + ' assistant:\n' + turn.answer;
+      }).join('\n\n');
+      segments.push(recent);
+    }
+
+    segments.push('Follow-up question:\n' + question);
+    return segments.join('\n\n');
+  }
+
+  followupEl.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var question = followupIn.value.trim();
+    if (!question || followupGo.disabled) return;
+    followupIn.value = '';
+    var prompt = composeFollowupPrompt(question);
+    streamPrompt(prompt, question);
+  });
+
+  streamPrompt(initialPrompt, initialPrompt);
 })();

@@ -33,6 +33,58 @@ body {
   font-size: 13px; white-space: pre-wrap;
 }
 
+#followup {
+  display: none;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+#followup.active { display: block; }
+#followup label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+#followup .row {
+  display: flex;
+  gap: 8px;
+}
+#followup-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 10px 12px;
+  font: inherit;
+}
+#followup-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-color: var(--accent);
+}
+#followup-send {
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+#followup-send:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  #followup .row {
+    flex-direction: column;
+  }
+}
+
 /* ---- Markdown content ---- */
 #response > :first-child { margin-top: 0; }
 #response h1, #response h2, #response h3,

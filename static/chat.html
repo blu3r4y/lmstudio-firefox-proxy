@@ -18,6 +18,13 @@
   <div id="thinking"></div>
 </div>
 <div id="response" class="streaming"></div>
+<form id="followup" autocomplete="off">
+  <label for="followup-input">Ask a follow-up</label>
+  <div class="row">
+    <input id="followup-input" type="text" placeholder="e.g. summarize this website" maxlength="2000">
+    <button id="followup-send" type="submit">Ask</button>
+  </div>
+</form>
 <div id="error"></div>
 <script src="/static/chat.js"></script>
 </body></html>

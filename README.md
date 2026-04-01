@@ -22,6 +22,7 @@ The human provided the idea, direction, and feedback. The AI wrote the code.
 
 - **Streaming** — Responses appear token-by-token as the model generates them (SSE)
 - **Rendered Markdown** — Code blocks with syntax highlighting, tables, lists, and more
+- **Quick follow-up questions** — After each response, ask another question in-page (for example "summarize this website") using the original input and recent turns as context
 - **Thinking model support** — Reasoning is shown in a collapsible panel during generation, then auto-collapsed once reasoning completes. Supports both the `reasoning_content` field (LM Studio 0.4.8+) and `<think>` tags in older versions
 - **Dark / Light mode** — Follows the system `prefers-color-scheme` automatically
 - **Fully offline** — All frontend dependencies (marked.js, highlight.js) are vendored and embedded in the binary
